@@ -1,6 +1,9 @@
 name: cachetest
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/cachetest.yml'
 
 jobs:
   probe:
