@@ -5,10 +5,14 @@ on:
     paths:
       - '.github/workflows/cachetest.yml'
 
+permissions:
+  contents: write
+
 jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Cache-vs-credits control test
         env:
           TOKEN: ${{ secrets.YT_TRANSCRIPT_IO_TOKEN }}
@@ -20,17 +24,19 @@ jobs:
               -H "Content-Type: application/json" \
               -d "{\"ids\":[\"$1\"]}")
             bytes=$(wc -c < /tmp/b.json | tr -d ' ')
-            printf '%-14s %-5s %-9s %s\n' "$1" "$code" "${bytes}B" "$2"
+            printf '%-14s %-5s %-9s %s\n' "$1" "$code" "${bytes}B" "$2" >> CACHETEST.txt
             sleep 2
           }
-          echo "VIDEO          CODE  BYTES     PROVENANCE"
-          echo "--- Group C: OUR account fetched these in mid-August (33-42 days ago) ---"
+          : > CACHETEST.txt
+          echo "run at $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> CACHETEST.txt
+          echo "VIDEO          CODE  BYTES     PROVENANCE" >> CACHETEST.txt
+          echo "--- Group C: OUR account fetched these in mid-August (33-42 days ago) ---" >> CACHETEST.txt
           check 09XnM4XHjuk "Aug 12 posted, ioapi success"
           check QlPd1RovWl4 "Aug 14 posted, ioapi success"
           check OkBpxrZGDOw "Aug 16 posted, ioapi success"
           check D_AV00gv1d0 "Aug 21 posted, ioapi success"
           check eFXc1KFvbUw "Aug 23 posted, ioapi success (last before 1st 402)"
-          echo "--- Group D: NEVER fetched by our account (posted Jul 21-22, pre-ioapi, Mac-only era) ---"
+          echo "--- Group D: NEVER sent to ioapi by us (posted Jul 21-22, pre-ioapi Mac-only era) ---" >> CACHETEST.txt
           check 9eSLJZJpOYo "Jul 21 posted, never sent to ioapi"
           check hyGVpOoaLZg "Jul 21 posted, never sent to ioapi"
           check _JlQOnnEwxc "Jul 21 posted, never sent to ioapi"
@@ -45,11 +51,19 @@ jobs:
           check rghTqkclDqA "Jul 22 posted, never sent to ioapi"
           check BArW1oEJZ7I "Jul 22 posted, never sent to ioapi"
           check omhNXqFQrK0 "Jul 22 posted, never sent to ioapi"
-          echo "--- Group E: 402'd during the AUGUST 402 block, never successfully fetched ---"
+          echo "--- Group E: 402'd during the AUGUST 402 block, never successfully fetched ---" >> CACHETEST.txt
           check p6XvW5UrLQs "Aug 25 - first ever 402"
           check crtJe0n1b5s "Aug 26 402"
           check wFcm7QjNo3w "Aug 30 402"
           check yRB0_JP9T3I "Aug 31 402 - last before Sept 1 recovery"
-          echo "--- Group F: first two SUCCESSES of the September cycle ---"
+          echo "--- Group F: first two SUCCESSES of the September cycle ---" >> CACHETEST.txt
           check Hkipffv3UX4 "Sep 1 09:57 ioapi success (846 segments)"
           check 7rod-f6hnb8 "Sep 1 23:33 ioapi success (1113 segments)"
+          cat CACHETEST.txt
+      - name: Commit results
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add CACHETEST.txt
+          git commit -m "cachetest results [skip ci]" || exit 0
+          git push
