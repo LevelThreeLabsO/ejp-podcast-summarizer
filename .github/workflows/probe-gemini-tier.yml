@@ -5,6 +5,10 @@ on:
       url:
         description: YouTube URL to summarize via the Gemini video tier
         required: true
+      skip_gemini_video:
+        description: Set to 1 to bypass tier 2 and test the ClipMaker transcript path instead
+        required: false
+        default: ""
 jobs:
   probe:
     runs-on: ubuntu-latest
@@ -20,7 +24,10 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           YT_TRANSCRIPT_IO_TOKEN: ${{ secrets.YT_TRANSCRIPT_IO_TOKEN }}
-          # CLIPMAKER deliberately OMITTED so the Mac tier cannot mask a
-          # failure in the Gemini video tier. If the tier is broken this run
-          # must fail, not quietly fall through to ClipMaker.
+          SKIP_GEMINI_VIDEO: ${{ inputs.skip_gemini_video }}
+          # CLIPMAKER is passed ONLY so the transcript path can be compared
+          # against the Gemini video tier. With skip_gemini_video empty, tier 2
+          # answers first and ClipMaker is never reached.
+          CLIPMAKER_URL: ${{ secrets.CLIPMAKER_URL }}
+          CLIPMAKER_AUTH_TOKEN: ${{ secrets.CLIPMAKER_AUTH_TOKEN }}
         run: python3 -u poll.py --url "${{ inputs.url }}"

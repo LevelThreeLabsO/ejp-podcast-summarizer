@@ -1634,6 +1634,13 @@ def process_url(url, dry_run=False, slack=None, thread_ts=None):
             #
             # Returns moments directly — there is no transcript to summarize.
             try:
+                if os.environ.get("SKIP_GEMINI_VIDEO"):
+                    # Debug escape hatch so the Mac/transcript path can be
+                    # exercised on its own and compared against this tier. Added
+                    # because eJP's video-tier output on an off-beat video
+                    # contained fabricated philanthropy angles, and there was no
+                    # way to tell whether the transcript path does the same.
+                    raise TransientError("SKIP_GEMINI_VIDEO set — skipping tier 2")
                 title = yt_title(video_id) or "video"
                 moments = yt_moments_via_gemini_video(url, title)
                 if moments:
