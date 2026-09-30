@@ -6,7 +6,11 @@ on:
         description: YouTube URL to summarize via the Gemini video tier
         required: true
       skip_gemini_video:
-        description: Set to 1 to bypass tier 2 and test the ClipMaker transcript path instead
+        description: Set to 1 to bypass the Gemini tier and test the transcript path
+        required: false
+        default: ""
+      post_thread_ts:
+        description: "Slack message ts to POST the summary into. Leave empty for a dry run that posts nothing."
         required: false
         default: ""
 jobs:
@@ -25,10 +29,17 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           YT_TRANSCRIPT_IO_TOKEN: ${{ secrets.YT_TRANSCRIPT_IO_TOKEN }}
           YT_QUOTA_ALERT_CHANNEL: ${{ secrets.YT_QUOTA_ALERT_CHANNEL }}
-          SKIP_GEMINI_VIDEO: ${{ inputs.skip_gemini_video }}
-          # CLIPMAKER is passed ONLY so the transcript path can be compared
-          # against the Gemini video tier. With skip_gemini_video empty, tier 2
-          # answers first and ClipMaker is never reached.
+          # CLIPMAKER is passed so recovery runs have the full tier chain.
+          # It can no longer mask a Gemini failure silently: the log now prints
+          # which tier answered ("(Gemini video)" vs a segment count), and
+          # SKIP_GEMINI_VIDEO=1 isolates the transcript path when that is what
+          # you want to test.
           CLIPMAKER_URL: ${{ secrets.CLIPMAKER_URL }}
           CLIPMAKER_AUTH_TOKEN: ${{ secrets.CLIPMAKER_AUTH_TOKEN }}
-        run: python3 -u poll.py --url "${{ inputs.url }}"
+          SKIP_GEMINI_VIDEO: ${{ inputs.skip_gemini_video }}
+        run: |
+          if [ -n "${{ inputs.post_thread_ts }}" ]; then
+            python3 -u poll.py --url "${{ inputs.url }}" --post-thread-ts "${{ inputs.post_thread_ts }}"
+          else
+            python3 -u poll.py --url "${{ inputs.url }}"
+          fi
